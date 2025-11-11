@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Yoshi 🍄</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #516eb1 0%, #6434bd 100%);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    canvas {
+      display: block;
+      margin: auto;
+      border: 6px solid transparent;
+      border-radius: 15px;
+      background-clip: padding-box;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+      animation: rainbowGlow 4s linear infinite;
+    }
+
+    @keyframes rainbowGlow {
+      0% { border-image: linear-gradient(45deg, violet, blue, cyan, green, yellow, orange, red) 1; box-shadow: 0 0 20px violet; }
+      25% { border-image: linear-gradient(45deg, blue, cyan, green, yellow, orange, red, violet) 1; box-shadow: 0 0 25px cyan; }
+      50% { border-image: linear-gradient(45deg, green, yellow, orange, red, violet, blue) 1; box-shadow: 0 0 25px lime; }
+      75% { border-image: linear-gradient(45deg, yellow, orange, red, violet, blue, green) 1; box-shadow: 0 0 25px gold; }
+      100% { border-image: linear-gradient(45deg, red, violet, blue, cyan, green, yellow, orange) 1; box-shadow: 0 0 20px magenta; }
+    }
+  </style>
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+<script>
+
+  
+const config = {
+  type: Phaser.AUTO,
+  width: 1000,
+  height: 600,
+  backgroundColor: '#6a5acd',
+  physics: {
+    default: "arcade",
+    arcade: { gravity: { y: 400 }, debug: false }
+  },
+  scene: { preload, create, update }
+};
+
+const game = new Phaser.Game(config);
+
+let player, cursors, ground, goombas, star, turtles, fireballs, jump, coeur;
+let score = 0, lives = 5, scoreText, livesText, isInvincible = false, winText;
+let rainbowMode = false;
+const speed = 400;
+const jumpSpeed = 300;
+
+function preload() {
+  this.load.image('goumba', 'goomba.png');
+  this.load.image('yoshi', 'chuppy.png');
+  this.load.image('star', 'etoile.png');
+  this.load.image('turtle', 'turtle.png');
+  this.load.image('jump', 'mushroom.png');
+  this.load.image('fireball', 'fireball.png');
+  this.load.image('coeur', 'coeur.png');
+  this.load.image('fond', 'fond.png')
+}
+
+function create() {
+  this.add.image(500,300, 'fond').setDisplaySize(1000, 600);
+
+  ground = this.add.rectangle(500, 600, 1000, 40, 0x000000, 0);
+  this.physics.add.existing(ground, true);
+
+  player = this.physics.add.sprite(100, 50, 'yoshi');
+  player.setScale(0.12);
+  player.setBounce(0.2);
+  player.setCollideWorldBounds(true);
+
+  goombas = this.physics.add.group();
+  for (let i = 0; i < 10; i++) {
+    let g = goombas.create(Phaser.Math.Between(150, 950), 100, 'goumba');
+    g.setScale(0.75);
+    g.setBounce(0.2);
+    g.setCollideWorldBounds(true);
+    g.speed = Phaser.Math.Between(50, 120);
+    g.direction = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+  }
+
+  this.physics.add.collider(player, ground);
+  
+  this.physics.add.collider(goombas, goombas);
+  this.physics.add.overlap(player, goombas, handlePlayerGoombaCollision, null, this);
+
+  star = this.physics.add.sprite(Phaser.Math.Between(200, 900), 300, 'star');
+  star.setScale(0.5);
+  star.setVisible(false);
+  star.body.enable = false;
+  star.setCollideWorldBounds(true);
+  this.physics.add.overlap(player, star, handlestarPickup, null, this);
+
+  turtles = this.physics.add.group();
+  fireballs = this.physics.add.group();
+  this.physics.add.overlap(player, fireballs, handleFireballHit, null, this);
+  this.physics.add.overlap(player, turtles, handlePlayerTurtleCollision, null, this);
+
+  jump = this.physics.add.sprite(Phaser.Math.Between(200,900), 300, 'jump');
+  jump.setScale(0.12);
+  jump.setVisible(false);
+  jump.body.enable = false;
+  jump.setCollideWorldBounds(true);
+  this.physics.add.overlap(player, jump, handleJumppick, null, this);
+
+  coeur = this.physics.add.sprite(Phaser.Math.Between(100, 900), 100, 'coeur');
+  coeur.setScale(0.5);
+  coeur.setVisible(false);
+  coeur.body.enable = false;
+  coeur.setCollideWorldBounds(true);
+  this.physics.add.overlap(player, coeur, handlecoeurPickup, null, this);
+
+  this.time.addEvent({
+    delay: Phaser.Math.Between(2000, 4000),
+    loop: true,
+    callback: () => {
+      goombas.getChildren().forEach(g => { if (Math.random() < 0.5) g.direction *= -1; });
+    }
+  });
+
+  scoreText = this.add.text(20, 20, 'Score: 0', { font: '20px Arial', fill: '#fff' });
+  livesText = this.add.text(20, 50, 'Vies: 5', { font: '20px Arial', fill: '#fff' });
+  winText = this.add.text(500, 180, '', { font: '40px Arial', fill: '#fff' }).setOrigin(0.5);
+
+  cursors = this.input.keyboard.createCursorKeys();
+}
+
+function update() {
+  player.body.setVelocityX(0);
+  let currentSpeed = rainbowMode ? (player.rainbowSpeed || speed) : speed;
+
+  if (cursors.left.isDown) player.body.setVelocityX(-currentSpeed);
+  else if (cursors.right.isDown) player.body.setVelocityX(currentSpeed);
+  if (cursors.up.isDown && player.body.touching.down) player.body.setVelocityY(-jumpSpeed);
+
+  goombas.getChildren().forEach(g => {
+    g.setVelocityX(g.speed * g.direction);
+    if(g.body.blocked.left || g.body.blocked.right) g.direction *= -1;
+  });
+
+  if(goombas.countActive(true) <= 5 && turtles.getChildren().length === 0){
+    for(let i = 0; i < 5; i++){
+      let t = turtles.create(150 + i*150, 100, 'turtle').setScale(1);
+      t.setCollideWorldBounds(true);
+      t.setBounce(1);
+      t.lastShot = 0;
+    }
+    jump.setVisible(true);
+    jump.body.enable = true;
+  }
+
+  // --- Turtles tirent des boules de feu ---
+  turtles.getChildren().forEach(t => {
+    if (!t.active) return; // ✅ Ne tire pas si turtle mort
+    t.setVelocityX(Phaser.Math.Between(-50,50));
+    if(!t.lastShot || this.time.now - t.lastShot > 2000){
+      for(let i=0; i<3; i++){
+        this.time.delayedCall(i*500, ()=> shootFireball(this, t.x, t.y));
+      }
+      t.lastShot = this.time.now;
+    }
+  });
+}
+
+function handlePlayerGoombaCollision(player, goomba){
+  if(player.body.velocity.y > 0 && player.y < goomba.y){
+    goomba.disableBody(true,true);
+    score++;
+    scoreText.setText('Score: '+score);
+    player.body.setVelocityY(-200);
+    checkVictory(this);
+  } else if(!isInvincible && !rainbowMode) loseLife(this);
+}
+
+function handlePlayerTurtleCollision(player, turtle){
+  if(player.body.velocity.y > 0 && player.y < turtle.y){
+    turtle.disableBody(true,true);
+    score += 2;
+    scoreText.setText('Score: '+score);
+
+    // ✅ Supprime les fireballs si tous les turtles sont morts
+    if (turtles.countActive(true) === 0) {
+      fireballs.clear(true, true);
+    }
+
+    player.body.setVelocityY(-200);
+    checkVictory(this);
+  } else if(!isInvincible && !rainbowMode){
+    loseLife(this);
+  }
+}
+
+function handleJumppick(player, jump){
+  jump.disableBody(true,true);
+  activatedJumping(this);
+}
+
+function activatedJumping(scene){}
+
+function handlestarPickup(player, star){
+  star.disableBody(true,true);
+  activateRainbowMode(this);
+}
+
+function handlecoeurPickup(player, coeur){
+  coeur.disableBody(true,true);
+  coeur.setVisible(false);
+  player.setTint(0x00ff00);
+  lives += 2;
+  if(lives > 5) lives = 5;
+  livesText.setText('Vie: '+lives);
+}
+
+function activateRainbowMode(scene){
+  rainbowMode = true;
+  isInvincible = true;
+  const colors=[0xff0000,0xff7f00,0xffff00,0x00ff00,0x0000ff,0x4b0082,0x9400d3];
+  let i=0;
+  let colorEvent=scene.time.addEvent({ delay:100, loop:true, callback:()=>{player.setTint(colors[i%colors.length]); i++;} });
+  player.rainbowSpeed=400;
+  scene.time.delayedCall(5000,()=>{ 
+    rainbowMode=false; 
+    isInvincible=false; 
+    colorEvent.remove(); 
+    player.clearTint(); 
+    player.rainbowSpeed=speed; 
+  });
+}
+
+function loseLife(scene){
+  if(lives <= 0) return;
+  lives--;
+  livesText.setText('Vies: '+lives);
+
+  player.setTint(0xff0000);
+  isInvincible = true;
+  player.body.setVelocityY(-150);
+  player.body.setVelocityX(-100);
+
+  scene.tweens.add({ targets: player, alpha:0.2, yoyo:true, repeat:5, duration:100 });
+  scene.time.delayedCall(1000,()=>{ isInvincible=false; player.clearTint(); player.setAlpha(1); });
+
+  if((lives===3||lives===1) && !star.visible){
+    star.enableBody(true, Phaser.Math.Between(100,900), 300, true, true);
+    star.setVisible(true);
+  }
+
+  if(lives === 3 && !coeur.visible){
+    coeur.enableBody(true, Phaser.Math.Between(100,900), 100, true, true);
+    coeur.setVisible(true);
+  }
+
+  if(lives <= 0){
+    scene.physics.pause();
+    player.setTint(0x000000);
+    scene.add.text(500,180,'💀 GAME OVER 💀\nF5 pour recommencer',{font:'40px Arial',fill:'0xff0000'}).setOrigin(0.5);
+  }
+}
+
+function shootFireball(scene, x, y){
+  let fb = fireballs.create(x, y, 'fireball').setScale(0.5);
+  fb.body.setVelocity(Phaser.Math.Between(-100,100), 200);
+  fb.setCollideWorldBounds(false);
+  fb.setBounce(1);
+}
+
+function handleFireballHit(player, fireball){
+  fireball.disableBody(true,true);
+  if(!isInvincible && !rainbowMode) loseLife(this);
+}
+
+function checkVictory(scene){
+  if(goombas.countActive(true) === 0 && turtles.countActive(true) === 0){
+    player.setTint(0x00ff00);
+    scene.add.text(500,180,'🏆 Victoire ! Tu as vaincu tous les ennemis 🍄 \n  Appuie sur F5 pour recommencer',{font:'40px Arial',fill:'0x00ff00'}).setOrigin(0.5);
+    scene.physics.pause();
+  }
+}
+</script>
+
+</body>
+</html>
