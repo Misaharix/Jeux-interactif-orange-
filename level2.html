@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tode 🍄 - Niveau 2</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #516eb1 0%, #6434bd 100%);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    canvas {
+      display: block;
+      margin: auto;
+      border: 6px solid transparent;
+      border-radius: 15px;
+      background-clip: padding-box;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+      animation: rainbowGlow 4s linear infinite;
+    }
+
+    @keyframes rainbowGlow {
+      0% { border-image: linear-gradient(45deg, violet, blue, cyan, green, yellow, orange, red) 1; box-shadow: 0 0 20px violet; }
+      25% { border-image: linear-gradient(45deg, blue, cyan, green, yellow, orange, red, violet) 1; box-shadow: 0 0 25px cyan; }
+      50% { border-image: linear-gradient(45deg, green, yellow, orange, red, violet, blue) 1; box-shadow: 0 0 25px lime; }
+      75% { border-image: linear-gradient(45deg, yellow, orange, red, violet, blue, green) 1; box-shadow: 0 0 25px gold; }
+      100% { border-image: linear-gradient(45deg, red, violet, blue, cyan, green, yellow, orange) 1; box-shadow: 0 0 20px magenta; }
+    }
+  </style>
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+<script>
+const config2 = {
+  type: Phaser.AUTO,
+  width: 1000,
+  height: 600,
+  backgroundColor: '#5a2d82',
+  physics: {
+    default: "arcade",
+    arcade: { gravity: { y: 400 }, debug: false }
+  },
+  scene: {
+    preload: preload2,
+    create: create2,
+    update: update2
+  }
+};
+
+let player2, cursors2, platforms2, enemies2, score2 = 0, scoreText2;
+
+const game2 = new Phaser.Game(config2);
+
+function preload2() {
+  this.load.image('player', 'public/chuppy.png');
+  this.load.image('platform', 'public/fond.png');
+  this.load.image('enemy', 'public/Soldat.png');
+}
+
+function create2() {
+  this.add.text(400, 50, 'Niveau 2', { font: '32px Arial', fill: '#fff' });
+
+  platforms2 = this.physics.add.staticGroup();
+  platforms2.create(500, 590, 'platform').setScale(2).refreshBody();
+
+  player2 = this.physics.add.sprite(100, 450, 'player').setScale(0.12);
+  player2.setCollideWorldBounds(true);
+
+  enemies2 = this.physics.add.group({
+    key: 'enemy',
+    repeat: 5,
+    setXY: { x: 150, y: 0, stepX: 150 }
+  });
+
+  enemies2.children.iterate(function(enemy) {
+    enemy.setScale(0.75);
+    enemy.setBounce(1);
+    enemy.setCollideWorldBounds(true);
+    enemy.setVelocity(Phaser.Math.Between(-100, 100), 20);
+  });
+
+  this.physics.add.collider(player2, platforms2);
+  this.physics.add.collider(enemies2, platforms2);
+  this.physics.add.collider(enemies2, enemies2);
+  
+  cursors2 = this.input.keyboard.createCursorKeys();
+
+  scoreText2 = this.add.text(20, 20, 'Score: 0', { font: '20px Arial', fill: '#fff' });
+}
+
+function update2() {
+player2.setVelocityX(0);
+
+  // Déplacement horizontal
+  if (cursors2.left.isDown) player2.setVelocityX(-160);
+  else if (cursors2.right.isDown) player2.setVelocityX(160);
+
+  // Saut avec body.blocked.down
+  if (cursors2.up.isDown && player2.body.blocked.down) {
+    player2.setVelocityY(-330);
+  }
+}
+</script>
+
+</body>
+</html>

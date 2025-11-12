@@ -346,7 +346,12 @@ function checkVictory(scene){
 
     if (scene.win) scene.win.play();
     
-    scene.add.text(500,180,'🏆 Victoire ! Tu as vaincu tous les ennemis 🍄 \n  Appuie sur F5 pour recommencer',{font:'40px Arial',fill:'0x00ff00'}).setOrigin(0.5);
+   scene.add.text(500, 230, '→ Passer au Boss Final ←', { font: '24px Arial', fill: '#4862DB' })
+  .setOrigin(0.5)
+  .setInteractive()
+  .on('pointerdown', () => {
+    window.location.href = 'level2.html';
+  });
     
     if(scene.bgm) scene.bgm.stop();
     scene.physics.pause();
