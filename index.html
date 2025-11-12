@@ -61,14 +61,14 @@ const speed = 400;
 const jumpSpeed = 300;
 
 function preload() {
-  this.load.image('goumba', 'goomba.png');
-  this.load.image('yoshi', 'chuppy.png');
-  this.load.image('star', 'etoile.png');
-  this.load.image('turtle', 'turtle.png');
-  this.load.image('jump', 'mushroom.png');
-  this.load.image('fireball', 'fireball.png');
-  this.load.image('coeur', 'coeur.png');
-  this.load.image('fond', 'fond.png')
+  this.load.image('goumba', 'public/goomba.png');
+  this.load.image('yoshi', 'public/chuppy.png');
+  this.load.image('star', 'public/etoile.png');
+  this.load.image('turtle', 'public/turtle.png');
+  this.load.image('jump', 'public/mushroom.png');
+  this.load.image('fireball', 'public/fireball.png');
+  this.load.image('coeur', 'public/coeur.png');
+  this.load.image('fond', 'public/fond.png')
 }
 
 function create() {
@@ -231,7 +231,7 @@ function activateRainbowMode(scene){
   let i=0;
   let colorEvent=scene.time.addEvent({ delay:100, loop:true, callback:()=>{player.setTint(colors[i%colors.length]); i++;} });
   player.rainbowSpeed=400;
-  scene.time.delayedCall(5000,()=>{ 
+  scene.time.delayedCall(5000,()=>{  // Delai de transformation en arc en ciel
     rainbowMode=false; 
     isInvincible=false; 
     colorEvent.remove(); 
