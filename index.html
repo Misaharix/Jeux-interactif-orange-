@@ -58,7 +58,7 @@ let player, cursors, ground, goombas, star, turtles, fireballs, jump, coeur;
 let score = 0, lives = 5, scoreText, livesText, isInvincible = false, winText;
 let rainbowMode = false;
 const speed = 400;
-const jumpSpeed = 300;
+let jumpSpeed = 300; // ✅ seule correction ici (avant c’était const)
 
 function preload() {
   this.load.image('goumba', 'public/goomba.png');
@@ -69,9 +69,31 @@ function preload() {
   this.load.image('fireball', 'public/fireball.png');
   this.load.image('coeur', 'public/coeur.png');
   this.load.image('fond', 'public/fond.png')
+  /////////////////////////////////////////
+  this.load.audio('bgm', 'public/mario-walking-through-dream-sequence-224596.mp3');
+  this.load.audio('deadgoumba','public/deadgoumba.mp3');
+  this.load.audio('fireball','public/fireball-explosion-impact-418596.mp3');
+  this.load.audio('saut','public/saut.mp3');
+  this.load.audio('win','public/winning-218995.mp3');
+  this.load.audio('superstar','public/superstar.mp3');
+  this.load.audio('gameover','public/gameover.mp3');
+  this.load.audio('vie' ,'public/vie.mp3');
+
 }
 
 function create() {
+  ////////////////////// AUDIO GAME ///////////////////////////////////
+this.bgm = this.sound.add('bgm',{loop : true, volume: 0.5});
+this.deadgoumba = this.sound.add('deadgoumba');
+this.fireball = this.sound.add('fireball');
+this.saut = this.sound.add('saut');
+this.win = this.sound.add('win');
+this.superstar = this.sound.add('superstar');
+this.gameover = this.sound.add('gameover');
+this.vie = this.sound.add('vie');
+
+this.bgm.play();
+  
   this.add.image(500,300, 'fond').setDisplaySize(1000, 600);
 
   ground = this.add.rectangle(500, 600, 1000, 40, 0x000000, 0);
@@ -144,7 +166,9 @@ function update() {
 
   if (cursors.left.isDown) player.body.setVelocityX(-currentSpeed);
   else if (cursors.right.isDown) player.body.setVelocityX(currentSpeed);
-  if (cursors.up.isDown && player.body.touching.down) player.body.setVelocityY(-jumpSpeed);
+  if (cursors.up.isDown && player.body.touching.down)
+  {player.body.setVelocityY(-jumpSpeed); 
+   this.saut.play()};
 
   goombas.getChildren().forEach(g => {
     g.setVelocityX(g.speed * g.direction);
@@ -162,9 +186,8 @@ function update() {
     jump.body.enable = true;
   }
 
-  // --- Turtles tirent des boules de feu ---
   turtles.getChildren().forEach(t => {
-    if (!t.active) return; // ✅ Ne tire pas si turtle mort
+    if (!t.active) return;
     t.setVelocityX(Phaser.Math.Between(-50,50));
     if(!t.lastShot || this.time.now - t.lastShot > 2000){
       for(let i=0; i<3; i++){
@@ -177,6 +200,7 @@ function update() {
 
 function handlePlayerGoombaCollision(player, goomba){
   if(player.body.velocity.y > 0 && player.y < goomba.y){
+    this.deadgoumba.play();
     goomba.disableBody(true,true);
     score++;
     scoreText.setText('Score: '+score);
@@ -187,15 +211,13 @@ function handlePlayerGoombaCollision(player, goomba){
 
 function handlePlayerTurtleCollision(player, turtle){
   if(player.body.velocity.y > 0 && player.y < turtle.y){
+    this.deadgoumba.play();
     turtle.disableBody(true,true);
     score += 2;
     scoreText.setText('Score: '+score);
-
-    // ✅ Supprime les fireballs si tous les turtles sont morts
     if (turtles.countActive(true) === 0) {
       fireballs.clear(true, true);
     }
-
     player.body.setVelocityY(-200);
     checkVictory(this);
   } else if(!isInvincible && !rainbowMode){
@@ -208,14 +230,33 @@ function handleJumppick(player, jump){
   activatedJumping(this);
 }
 
-function activatedJumping(scene){}
+function activatedJumping(scene){
+  const previousjump = jumpSpeed;
+  const jumpboost = 800;
+
+  jumpSpeed = jumpboost;
+  player.setTint(0x0000ff);
+
+  scene.time.delayedCall(5000, () =>{
+    jumpSpeed = previousjump;
+    if (!rainbowMode){
+      player.clearTint();
+    }
+  }, null ,scene);
+}
 
 function handlestarPickup(player, star){
+  if (this.bgm.isPlaying) {
+   this.bgm.pause();
+  }
+/////// super star son//////
+  this.currentSuperstarBGM = this.superstar.play();
   star.disableBody(true,true);
   activateRainbowMode(this);
 }
 
 function handlecoeurPickup(player, coeur){
+  this.vie.play();
   coeur.disableBody(true,true);
   coeur.setVisible(false);
   player.setTint(0x00ff00);
@@ -229,14 +270,19 @@ function activateRainbowMode(scene){
   isInvincible = true;
   const colors=[0xff0000,0xff7f00,0xffff00,0x00ff00,0x0000ff,0x4b0082,0x9400d3];
   let i=0;
-  let colorEvent=scene.time.addEvent({ delay:100, loop:true, callback:()=>{player.setTint(colors[i%colors.length]); i++;} });
+  let colorEvent=scene.time.addEvent({ delay:100, loop:true, callback:()=>{player.setTint(colors[i%colors.length]); i++;}, });
   player.rainbowSpeed=400;
-  scene.time.delayedCall(5000,()=>{  // Delai de transformation en arc en ciel
+  scene.time.delayedCall(5000,()=>{  
     rainbowMode=false; 
     isInvincible=false; 
     colorEvent.remove(); 
     player.clearTint(); 
     player.rainbowSpeed=speed; 
+    ///// son toile//////
+    if (scene.currentSuperstarBGM && scene.currentSuperstarBGM.isPlaying) {
+      scene.currentSuperstarBGM.stop();
+   }
+    scene.bgm.resume();
   });
 }
 
@@ -263,7 +309,14 @@ function loseLife(scene){
     coeur.setVisible(true);
   }
 
+  if(turtles.countActive(true)=== 3 && !jump.visible){
+    jump.enableBody(true, Phaser.Math.Between(100,900),500, true, true);
+    jump.setVisible(true);
+  }
+
   if(lives <= 0){
+    if (scene.gameover) scene.gameover.play({volume : 1});
+    scene.bgm.stop();
     scene.physics.pause();
     player.setTint(0x000000);
     scene.add.text(500,180,'💀 GAME OVER 💀\nF5 pour recommencer',{font:'40px Arial',fill:'0xff0000'}).setOrigin(0.5);
@@ -278,18 +331,23 @@ function shootFireball(scene, x, y){
 }
 
 function handleFireballHit(player, fireball){
+  this.fireball.play();
   fireball.disableBody(true,true);
   if(!isInvincible && !rainbowMode) loseLife(this);
 }
 
 function checkVictory(scene){
+  
   if(goombas.countActive(true) === 0 && turtles.countActive(true) === 0){
     player.setTint(0x00ff00);
+
+    if (scene.win) scene.win.play();
+    
     scene.add.text(500,180,'🏆 Victoire ! Tu as vaincu tous les ennemis 🍄 \n  Appuie sur F5 pour recommencer',{font:'40px Arial',fill:'0x00ff00'}).setOrigin(0.5);
+    if(scene.bgm) scene.bgm.stop();
     scene.physics.pause();
   }
 }
 </script>
-
 </body>
 </html>
