@@ -69,7 +69,7 @@ function preload() {
   this.load.image('fireball', 'public/fireball.png');
   this.load.image('coeur', 'public/coeur.png');
   this.load.image('fond', 'public/fond.png')
-  /////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////
   this.load.audio('bgm', 'public/mario-walking-through-dream-sequence-224596.mp3');
   this.load.audio('deadgoumba','public/deadgoumba.mp3');
   this.load.audio('fireball','public/fireball-explosion-impact-418596.mp3');
@@ -78,6 +78,7 @@ function preload() {
   this.load.audio('superstar','public/superstar.mp3');
   this.load.audio('gameover','public/gameover.mp3');
   this.load.audio('vie' ,'public/vie.mp3');
+  this.load.audio('transformjump','public/jumpTransform.mp3')
 
 }
 
@@ -91,10 +92,11 @@ this.win = this.sound.add('win');
 this.superstar = this.sound.add('superstar');
 this.gameover = this.sound.add('gameover');
 this.vie = this.sound.add('vie');
+this.transformjump = this.sound.add('transformjump');
 
 this.bgm.play();
   
-  this.add.image(500,300, 'fond').setDisplaySize(1000, 600);
+  this.add.image(500,300, 'fond').setDisplaySize(1000, 600); ////////// fond de l'image
 
   ground = this.add.rectangle(500, 600, 1000, 40, 0x000000, 0);
   this.physics.add.existing(ground, true);
@@ -227,6 +229,7 @@ function handlePlayerTurtleCollision(player, turtle){
 
 function handleJumppick(player, jump){
   jump.disableBody(true,true);
+  this.transformjump.play();
   activatedJumping(this);
 }
 
@@ -250,7 +253,7 @@ function handlestarPickup(player, star){
    this.bgm.pause();
   }
 /////// super star son//////
-  this.currentSuperstarBGM = this.superstar.play();
+  this.currentSuperstarBGM = this.superstar.play({volume: 0.5});
   star.disableBody(true,true);
   activateRainbowMode(this);
 }
@@ -344,6 +347,7 @@ function checkVictory(scene){
     if (scene.win) scene.win.play();
     
     scene.add.text(500,180,'🏆 Victoire ! Tu as vaincu tous les ennemis 🍄 \n  Appuie sur F5 pour recommencer',{font:'40px Arial',fill:'0x00ff00'}).setOrigin(0.5);
+    
     if(scene.bgm) scene.bgm.stop();
     scene.physics.pause();
   }
